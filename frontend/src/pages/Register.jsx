@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, checkEmail } from '../services/api';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -83,8 +84,7 @@ export default function Register() {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-icon">🏛️</div>
-          <h1>Campus Mini-Cloud</h1>
+          <BrandLogo size={48} />
           <p>Create your account</p>
         </div>
 

@@ -4,6 +4,7 @@ import { getMe, listFiles, logout } from '../services/api';
 import QuotaBar from '../components/QuotaBar';
 import FileList from '../components/FileList';
 import UploadButton from '../components/UploadButton';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Dashboard({ user, onLogout }) {
   const navigate = useNavigate();
@@ -53,8 +54,7 @@ export default function Dashboard({ user, onLogout }) {
       <nav className="navbar">
         <div className="navbar-inner">
           <Link to="/dashboard" className="navbar-brand">
-            <span className="logo-emoji">🏛️</span>
-            Campus Mini-Cloud
+            <BrandLogo size={28} />
           </Link>
           <div className="navbar-nav">
             <span className="navbar-user">

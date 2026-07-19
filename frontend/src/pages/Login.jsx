@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/api';
+import BrandLogo from '../components/BrandLogo';
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -32,8 +33,7 @@ export default function Login({ onLogin }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-icon">🏛️</div>
-          <h1>Campus Mini-Cloud</h1>
+          <BrandLogo size={48} />
           <p>Private encrypted file storage</p>
         </div>
 

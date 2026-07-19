@@ -9,6 +9,7 @@ import {
   adminDeleteAllowedEmail,
   adminRegenerateAllowedEmail,
 } from '../services/api';
+import BrandLogo from '../components/BrandLogo';
 
 function formatBytes(bytes) {
   const b = Number(bytes);
@@ -144,8 +145,7 @@ export default function Admin({ user, onLogout }) {
       <nav className="navbar">
         <div className="navbar-inner">
           <Link to="/dashboard" className="navbar-brand">
-            <span className="logo-emoji">🏛️</span>
-            Campus Mini-Cloud
+            <BrandLogo size={28} />
           </Link>
           <div className="navbar-nav">
             <span className="navbar-user">
