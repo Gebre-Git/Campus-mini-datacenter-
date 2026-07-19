@@ -100,19 +100,45 @@ router.post('/allowed-emails', async (req, res) => {
       return res.status(400).json({ error: 'Email is already in the allowed list' });
     }
 
-    // Generate random 5-digit code
+    // Generate random 5-digit code and 24-hour expiration
     const code = Math.floor(10000 + Math.random() * 90000).toString();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const created = await prisma.allowedEmail.create({
       data: {
         email: sanitizedEmail,
         code,
+        expiresAt,
       },
     });
     return res.status(201).json(created);
   } catch (err) {
     console.error('[admin/allowed-emails/post]', err);
     return res.status(500).json({ error: 'Failed to add allowed email' });
+  }
+});
+
+// POST /api/admin/allowed-emails/:id/regenerate
+router.post('/allowed-emails/:id/regenerate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const newCode = Math.floor(10000 + Math.random() * 90000).toString();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    const updated = await prisma.allowedEmail.update({
+      where: { id },
+      data: {
+        code: newCode,
+        expiresAt,
+        failedAttempts: 0,
+        blockedUntil: null,
+      },
+    });
+
+    return res.json(updated);
+  } catch (err) {
+    console.error('[admin/allowed-emails/regenerate]', err);
+    return res.status(500).json({ error: 'Failed to regenerate code' });
   }
 });
 

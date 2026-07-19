@@ -20,10 +20,13 @@ model User {
 }
 
 model AllowedEmail {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  code      String
-  createdAt DateTime @default(now())
+  id             String    @id @default(uuid())
+  email          String    @unique
+  code           String
+  expiresAt      DateTime
+  failedAttempts Int       @default(0)
+  blockedUntil   DateTime?
+  createdAt      DateTime  @default(now())
 }
 
 

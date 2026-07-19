@@ -8,6 +8,69 @@ const { sessionKeys } = require('../middleware/auth.middleware');
 const router = express.Router();
 const SALT_ROUNDS = 10;
 
+// Helper function to validate allowed email code, expiration, and rate limits
+async function validateAllowedEmailCode(allowed, sanitizedCode) {
+  const now = new Date();
+
+  // 1. Check if email is locked out (5 failed attempts block for 1 hour)
+  if (allowed.blockedUntil && now < new Date(allowed.blockedUntil)) {
+    const diffMs = new Date(allowed.blockedUntil) - now;
+    const diffMins = Math.ceil(diffMs / (60 * 1000));
+    return {
+      error: `Too many failed attempts. Registration for this email is blocked for ${diffMins} more minute(s).`
+    };
+  }
+
+  // 2. Check if code has expired (24 hours validity)
+  if (now > new Date(allowed.expiresAt)) {
+    return {
+      error: 'Verification code has expired (valid for 24 hours). Please request a new code from the administrator.'
+    };
+  }
+
+  // 3. Check if code matches
+  if (allowed.code !== sanitizedCode) {
+    const newFailedAttempts = (allowed.failedAttempts || 0) + 1;
+    let blockedUntil = null;
+    let errorMsg = `Invalid verification code (${newFailedAttempts} of 5 failed attempts).`;
+
+    if (newFailedAttempts >= 5) {
+      blockedUntil = new Date(Date.now() + 60 * 60 * 1000); // 1 hour lockout
+      errorMsg = 'Too many failed attempts (5 of 5). Registration for this email is now blocked for 1 hour.';
+      
+      await prisma.allowedEmail.update({
+        where: { id: allowed.id },
+        data: {
+          failedAttempts: 0,
+          blockedUntil,
+        },
+      });
+    } else {
+      await prisma.allowedEmail.update({
+        where: { id: allowed.id },
+        data: {
+          failedAttempts: newFailedAttempts,
+        },
+      });
+    }
+
+    return { error: errorMsg };
+  }
+
+  // Correct code! Clear any previous failed attempt counts or locks
+  if (allowed.failedAttempts > 0 || allowed.blockedUntil) {
+    await prisma.allowedEmail.update({
+      where: { id: allowed.id },
+      data: {
+        failedAttempts: 0,
+        blockedUntil: null,
+      },
+    });
+  }
+
+  return { valid: true };
+}
+
 // GET or POST /api/check-email
 const handleCheckEmail = async (req, res) => {
   try {
@@ -35,9 +98,10 @@ const handleCheckEmail = async (req, res) => {
       return res.status(400).json({ error: 'Email is not in the allowed list. Please contact the administrator.' });
     }
 
-    // Check if code matches
-    if (allowed.code !== sanitizedCode) {
-      return res.status(400).json({ error: 'Invalid verification code. Please check with your administrator.' });
+    // Validate code, expiration, and rate limits
+    const validation = await validateAllowedEmailCode(allowed, sanitizedCode);
+    if (validation.error) {
+      return res.status(400).json({ error: validation.error });
     }
 
     // Check if already registered
@@ -95,8 +159,9 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ error: 'Email is not in the allowed list' });
       }
 
-      if (allowed.code !== sanitizedCode) {
-        return res.status(400).json({ error: 'Invalid verification code' });
+      const validation = await validateAllowedEmailCode(allowed, sanitizedCode);
+      if (validation.error) {
+        return res.status(400).json({ error: validation.error });
       }
 
       // Check if already registered

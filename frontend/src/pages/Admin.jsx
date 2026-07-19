@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { adminGetFiles, adminGetUsers, logout, adminGetAllowedEmails, adminAddAllowedEmail, adminDeleteAllowedEmail } from '../services/api';
+import {
+  adminGetFiles,
+  adminGetUsers,
+  logout,
+  adminGetAllowedEmails,
+  adminAddAllowedEmail,
+  adminDeleteAllowedEmail,
+  adminRegenerateAllowedEmail,
+} from '../services/api';
 
 function formatBytes(bytes) {
   const b = Number(bytes);
@@ -15,6 +23,16 @@ function formatDate(dateStr) {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
+}
+
+function formatRemainingTime(expiresAtStr) {
+  if (!expiresAtStr) return 'No Expiry';
+  const diffMs = new Date(expiresAtStr) - new Date();
+  if (diffMs <= 0) return 'Expired';
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${mins}m`;
 }
 
 export default function Admin({ user, onLogout }) {
@@ -75,11 +93,23 @@ export default function Admin({ user, onLogout }) {
       const created = await adminAddAllowedEmail(emailToSubmit);
       setAllowedEmails((prev) => [created, ...prev]);
       setNewEmail('');
-      setEmailSuccess(`Email added! 5-Digit Verification Code: ${created.code}`);
+      setEmailSuccess(`Email added! 5-Digit Verification Code: ${created.code} (Valid for 24h)`);
     } catch (err) {
       setEmailError(err.message);
     } finally {
       setActionLoading(false);
+    }
+  }
+
+  async function handleRegenerateCode(id) {
+    setEmailError('');
+    setEmailSuccess('');
+    try {
+      const updated = await adminRegenerateAllowedEmail(id);
+      setAllowedEmails((prev) => prev.map((item) => (item.id === id ? updated : item)));
+      setEmailSuccess(`New code generated: ${updated.code} (Valid for 24h). Lockouts cleared.`);
+    } catch (err) {
+      setEmailError(err.message);
     }
   }
 
@@ -250,41 +280,73 @@ export default function Admin({ user, onLogout }) {
                     <tr>
                       <th>Email Address</th>
                       <th>5-Digit Code</th>
-                      <th>Added On</th>
+                      <th>Status</th>
+                      <th>Expires In</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {allowedEmails.map((item) => (
-                      <tr key={item.id}>
-                        <td style={{ fontWeight: 500 }}>{item.email}</td>
-                        <td>
-                          <span style={{
-                            fontFamily: 'monospace',
-                            fontSize: '1rem',
-                            fontWeight: 700,
-                            letterSpacing: '0.1rem',
-                            color: 'var(--accent)',
-                            background: 'rgba(99, 102, 241, 0.15)',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid rgba(99, 102, 241, 0.3)',
-                          }}>
-                            {item.code}
-                          </span>
-                        </td>
-                        <td className="file-date">{formatDate(item.createdAt)}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteEmail(item.id)}
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {allowedEmails.map((item) => {
+                      const now = new Date();
+                      const isBlocked = item.blockedUntil && now < new Date(item.blockedUntil);
+                      const isExpired = item.expiresAt && now > new Date(item.expiresAt);
+                      const blockMinsLeft = isBlocked ? Math.ceil((new Date(item.blockedUntil) - now) / 60000) : 0;
+
+                      return (
+                        <tr key={item.id}>
+                          <td style={{ fontWeight: 500 }}>{item.email}</td>
+                          <td>
+                            <span style={{
+                              fontFamily: 'monospace',
+                              fontSize: '1rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.1rem',
+                              color: isBlocked || isExpired ? 'var(--text-muted)' : 'var(--accent)',
+                              background: 'rgba(99, 102, 241, 0.15)',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              textDecoration: isExpired ? 'line-through' : 'none'
+                            }}>
+                              {item.code}
+                            </span>
+                          </td>
+                          <td>
+                            {isBlocked ? (
+                              <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                Blocked ({blockMinsLeft}m)
+                              </span>
+                            ) : isExpired ? (
+                              <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                Expired
+                              </span>
+                            ) : (
+                              <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                Active
+                              </span>
+                            )}
+                          </td>
+                          <td className="file-date">{formatRemainingTime(item.expiresAt)}</td>
+                          <td style={{ textAlign: 'right', display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary btn-sm"
+                              title="Generate a new 24h code & unblock"
+                              onClick={() => handleRegenerateCode(item.id)}
+                            >
+                              New Code
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger btn-sm"
+                              onClick={() => handleDeleteEmail(item.id)}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

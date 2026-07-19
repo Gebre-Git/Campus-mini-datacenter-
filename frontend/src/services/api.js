@@ -212,3 +212,11 @@ export async function adminDeleteAllowedEmail(id) {
   });
   return handleResponse(res);
 }
+
+export async function adminRegenerateAllowedEmail(id) {
+  const res = await fetch(`/api/admin/allowed-emails/${id}/regenerate`, {
+    method: 'POST',
+    headers: { ...authHeaders() },
+  });
+  return handleResponse(res);
+}
