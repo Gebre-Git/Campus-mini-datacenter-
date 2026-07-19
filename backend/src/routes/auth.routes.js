@@ -8,13 +8,71 @@ const { sessionKeys } = require('../middleware/auth.middleware');
 const router = express.Router();
 const SALT_ROUNDS = 10;
 
+// GET or POST /api/check-email
+const handleCheckEmail = async (req, res) => {
+  try {
+    const email = req.body?.email || req.query?.email;
+    const code = req.body?.code || req.query?.code;
+
+    // Check user count for bootstrap bypass
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      return res.json({ allowed: true, bootstrap: true });
+    }
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and 5-digit verification code are required' });
+    }
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedCode = code.trim();
+
+    // Check if in allowed list
+    const allowed = await prisma.allowedEmail.findUnique({
+      where: { email: sanitizedEmail },
+    });
+    if (!allowed) {
+      return res.status(400).json({ error: 'Email is not in the allowed list. Please contact the administrator.' });
+    }
+
+    // Check if code matches
+    if (allowed.code !== sanitizedCode) {
+      return res.status(400).json({ error: 'Invalid verification code. Please check with your administrator.' });
+    }
+
+    // Check if already registered
+    const registered = await prisma.user.findUnique({
+      where: { email: sanitizedEmail },
+    });
+    if (registered) {
+      return res.status(400).json({ error: 'An account has already been registered with this email' });
+    }
+
+    return res.json({ allowed: true });
+  } catch (err) {
+    console.error('[check-email]', err);
+    return res.status(500).json({ error: 'Server error checking email and code' });
+  }
+};
+
+router.get('/check-email', handleCheckEmail);
+router.post('/check-email', handleCheckEmail);
+
 // POST /api/register
 router.post('/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, code, username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password are required' });
+    const userCount = await prisma.user.count();
+
+    if (userCount > 0) {
+      if (!email || !code || !username || !password) {
+        return res.status(400).json({ error: 'Email, verification code, username, and password are required' });
+      }
+    } else {
+      if (!email || !username || !password) {
+        return res.status(400).json({ error: 'Email, username, and password are required' });
+      }
     }
 
     if (username.length < 3 || username.length > 32) {
@@ -25,16 +83,45 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
+    const sanitizedEmail = email.trim().toLowerCase();
+
+    // Unless 0 users exist (bootstrap), enforce allowed email and code check
+    if (userCount > 0) {
+      const sanitizedCode = code.trim();
+      const allowed = await prisma.allowedEmail.findUnique({
+        where: { email: sanitizedEmail },
+      });
+      if (!allowed) {
+        return res.status(400).json({ error: 'Email is not in the allowed list' });
+      }
+
+      if (allowed.code !== sanitizedCode) {
+        return res.status(400).json({ error: 'Invalid verification code' });
+      }
+
+      // Check if already registered
+      const existingEmail = await prisma.user.findUnique({
+        where: { email: sanitizedEmail },
+      });
+      if (existingEmail) {
+        return res.status(400).json({ error: 'Email is already registered' });
+      }
+    }
+
     // Check if username is taken
-    const existing = await prisma.user.findUnique({ where: { username } });
-    if (existing) {
+    const existingUser = await prisma.user.findUnique({ where: { username } });
+    if (existingUser) {
       return res.status(409).json({ error: 'Username already taken' });
     }
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
     await prisma.user.create({
-      data: { username, passwordHash },
+      data: {
+        email: sanitizedEmail,
+        username,
+        passwordHash,
+      },
     });
 
     return res.status(201).json({ message: 'Account created successfully. You can now log in.' });

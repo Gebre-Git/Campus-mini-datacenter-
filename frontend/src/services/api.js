@@ -51,11 +51,20 @@ async function handleResponse(res) {
 }
 
 // ── Auth ──────────────────────────────────────────────
-export async function register(username, password) {
+export async function register(email, code, username, password) {
   const res = await fetch('/api/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ email, code, username, password }),
+  });
+  return handleResponse(res);
+}
+
+export async function checkEmail(email, code) {
+  const res = await fetch('/api/check-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code }),
   });
   return handleResponse(res);
 }
@@ -172,6 +181,33 @@ export async function adminGetFiles() {
 
 export async function adminGetUsers() {
   const res = await fetch('/api/admin/users', {
+    headers: { ...authHeaders() },
+  });
+  return handleResponse(res);
+}
+
+export async function adminGetAllowedEmails() {
+  const res = await fetch('/api/admin/allowed-emails', {
+    headers: { ...authHeaders() },
+  });
+  return handleResponse(res);
+}
+
+export async function adminAddAllowedEmail(email) {
+  const res = await fetch('/api/admin/allowed-emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse(res);
+}
+
+export async function adminDeleteAllowedEmail(id) {
+  const res = await fetch(`/api/admin/allowed-emails/${id}`, {
+    method: 'DELETE',
     headers: { ...authHeaders() },
   });
   return handleResponse(res);

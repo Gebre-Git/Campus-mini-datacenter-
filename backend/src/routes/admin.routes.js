@@ -70,4 +70,64 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// GET /api/admin/allowed-emails
+router.get('/allowed-emails', async (req, res) => {
+  try {
+    const emails = await prisma.allowedEmail.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return res.json(emails);
+  } catch (err) {
+    console.error('[admin/allowed-emails/get]', err);
+    return res.status(500).json({ error: 'Failed to retrieve allowed emails' });
+  }
+});
+
+// POST /api/admin/allowed-emails
+router.post('/allowed-emails', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'A valid email is required' });
+    }
+    const sanitizedEmail = email.trim().toLowerCase();
+    
+    // Check if already in the allowed list
+    const existingAllowed = await prisma.allowedEmail.findUnique({
+      where: { email: sanitizedEmail },
+    });
+    if (existingAllowed) {
+      return res.status(400).json({ error: 'Email is already in the allowed list' });
+    }
+
+    // Generate random 5-digit code
+    const code = Math.floor(10000 + Math.random() * 90000).toString();
+
+    const created = await prisma.allowedEmail.create({
+      data: {
+        email: sanitizedEmail,
+        code,
+      },
+    });
+    return res.status(201).json(created);
+  } catch (err) {
+    console.error('[admin/allowed-emails/post]', err);
+    return res.status(500).json({ error: 'Failed to add allowed email' });
+  }
+});
+
+// DELETE /api/admin/allowed-emails/:id
+router.delete('/allowed-emails/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.allowedEmail.delete({
+      where: { id },
+    });
+    return res.json({ message: 'Email removed from allowed list' });
+  } catch (err) {
+    console.error('[admin/allowed-emails/delete]', err);
+    return res.status(500).json({ error: 'Failed to remove allowed email' });
+  }
+});
+
 module.exports = router;
