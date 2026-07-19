@@ -3,6 +3,7 @@ import { downloadFile, deleteFile } from '../services/api';
 
 function formatBytes(bytes) {
   const b = Number(bytes);
+  if (isNaN(b) || b < 0) return '0 B';
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
   if (b < 1024 * 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
@@ -11,8 +12,11 @@ function formatBytes(bytes) {
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -50,8 +54,8 @@ export default function FileList({ files, onRefresh }) {
   if (!files || files.length === 0) {
     return (
       <div className="empty-state">
-        <div className="empty-icon">📂</div>
-        <p>No files yet. Upload your first file above.</p>
+        <div style={{ fontSize: '2rem', marginBottom: '0.5rem', color: 'var(--text-muted)' }}>∅</div>
+        <p style={{ fontSize: '0.95rem', letterSpacing: '0.05em' }}>NO STORED FILES FOUND</p>
       </div>
     );
   }
@@ -59,45 +63,66 @@ export default function FileList({ files, onRefresh }) {
   return (
     <>
       {error && <div className="alert alert-error">{error}</div>}
-      <div className="file-table-wrap">
-        <table className="file-table">
+      
+      <div className="responsive-table-wrap">
+        <table className="data-table data-table-responsive">
           <thead>
             <tr>
               <th>Filename</th>
               <th>Size</th>
-              <th>Uploaded</th>
-              <th>Actions</th>
+              <th>Timestamp</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {files.map((file) => (
               <tr key={file.id}>
                 <td>
-                  <span className="file-name" title={file.filename}>
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      wordBreak: 'break-all',
+                      color: 'var(--text-primary)',
+                      fontSize: '1rem', /* 16px minimum */
+                    }}
+                    title={file.filename}
+                  >
                     {file.filename}
-                  </span>
-                </td>
-                <td className="file-size">{formatBytes(file.sizeBytes)}</td>
-                <td className="file-date">{formatDate(file.uploadedAt)}</td>
-                <td>
-                  <div className="actions-cell">
-                    <button
-                      id={`download-${file.id}`}
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => handleDownload(file)}
-                      disabled={downloading === file.id || deleting === file.id}
-                    >
-                      {downloading === file.id ? <span className="spinner" /> : '⬇ Download'}
-                    </button>
-                    <button
-                      id={`delete-${file.id}`}
-                      className="btn btn-danger btn-sm"
-                      onClick={() => handleDelete(file)}
-                      disabled={downloading === file.id || deleting === file.id}
-                    >
-                      {deleting === file.id ? <span className="spinner" /> : '🗑 Delete'}
-                    </button>
                   </div>
+                </td>
+                <td className="cell-mono">{formatBytes(file.sizeBytes)}</td>
+                <td className="cell-mono">{formatDate(file.uploadedAt)}</td>
+                <td className="cell-actions" style={{ justifyContent: 'flex-end' }}>
+                  <button
+                    id={`download-${file.id}`}
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => handleDownload(file)}
+                    disabled={downloading === file.id || deleting === file.id}
+                    title="Download file"
+                  >
+                    {downloading === file.id ? (
+                      <span className="spinner" />
+                    ) : (
+                      <>
+                        <span>⬇</span> Download
+                      </>
+                    )}
+                  </button>
+                  <button
+                    id={`delete-${file.id}`}
+                    className="btn btn-danger btn-sm"
+                    onClick={() => handleDelete(file)}
+                    disabled={downloading === file.id || deleting === file.id}
+                    title="Delete file"
+                  >
+                    {deleting === file.id ? (
+                      <span className="spinner" />
+                    ) : (
+                      <>
+                        <span>🗑</span> Delete
+                      </>
+                    )}
+                  </button>
                 </td>
               </tr>
             ))}

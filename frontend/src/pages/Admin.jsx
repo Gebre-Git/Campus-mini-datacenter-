@@ -13,6 +13,7 @@ import BrandLogo from '../components/BrandLogo';
 
 function formatBytes(bytes) {
   const b = Number(bytes);
+  if (isNaN(b) || b < 0) return '0 B';
   if (b < 1024) return `${b} B`;
   if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
   if (b < 1024 * 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
@@ -21,8 +22,11 @@ function formatBytes(bytes) {
 
 function formatDate(dateStr) {
   return new Date(dateStr).toLocaleString(undefined, {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -58,7 +62,7 @@ export default function Admin({ user, onLogout }) {
         const [f, u, e] = await Promise.all([
           adminGetFiles(),
           adminGetUsers(),
-          adminGetAllowedEmails()
+          adminGetAllowedEmails(),
         ]);
         setFiles(f);
         setUsers(u);
@@ -94,7 +98,7 @@ export default function Admin({ user, onLogout }) {
       const created = await adminAddAllowedEmail(emailToSubmit);
       setAllowedEmails((prev) => [created, ...prev]);
       setNewEmail('');
-      setEmailSuccess(`Email added! 5-Digit Verification Code: ${created.code} (Valid for 24h)`);
+      setEmailSuccess(`Access Code Generated: ${created.code} (Valid for 24 hours)`);
     } catch (err) {
       setEmailError(err.message);
     } finally {
@@ -108,14 +112,14 @@ export default function Admin({ user, onLogout }) {
     try {
       const updated = await adminRegenerateAllowedEmail(id);
       setAllowedEmails((prev) => prev.map((item) => (item.id === id ? updated : item)));
-      setEmailSuccess(`New code generated: ${updated.code} (Valid for 24h). Lockouts cleared.`);
+      setEmailSuccess(`New code generated: ${updated.code} (24h validity restored)`);
     } catch (err) {
       setEmailError(err.message);
     }
   }
 
   async function handleDeleteEmail(id) {
-    if (!window.confirm('Are you sure you want to remove this email?')) {
+    if (!window.confirm('Revoke access authorization for this email?')) {
       return;
     }
     setEmailError('');
@@ -123,7 +127,7 @@ export default function Admin({ user, onLogout }) {
     try {
       await adminDeleteAllowedEmail(id);
       setAllowedEmails((prev) => prev.filter((item) => item.id !== id));
-      setEmailSuccess('Email removed successfully.');
+      setEmailSuccess('Email authorization revoked.');
     } catch (err) {
       setEmailError(err.message);
     }
@@ -131,9 +135,9 @@ export default function Admin({ user, onLogout }) {
 
   if (loading) {
     return (
-      <div className="loading-page">
-        <span className="spinner" />
-        <span>Loading admin data…</span>
+      <div className="page-loading">
+        <span className="spinner" style={{ width: 32, height: 32 }} />
+        <span>LOADING INFRASTRUCTURE TELEMETRY…</span>
       </div>
     );
   }
@@ -142,17 +146,29 @@ export default function Admin({ user, onLogout }) {
 
   return (
     <>
+      {/* Navbar */}
       <nav className="navbar">
         <div className="navbar-inner">
-          <Link to="/dashboard" className="navbar-brand">
-            <BrandLogo size={28} />
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <Link to="/dashboard" className="navbar-brand-link">
+              <BrandLogo size={36} />
+            </Link>
+            <div className="navbar-status">
+              <span className="status-dot" />
+              <span>ADMIN MODE</span>
+            </div>
+          </div>
+
           <div className="navbar-nav">
-            <span className="navbar-user">
-              <strong>{user?.username}</strong>
+            <span className="navbar-user-text">
+              OPERATOR <strong>{user?.username}</strong>
               <span className="badge-admin">Admin</span>
             </span>
-            <Link to="/dashboard" className="btn btn-secondary btn-sm">My Files</Link>
+
+            <Link to="/dashboard" className="btn btn-secondary btn-sm">
+              User Dashboard
+            </Link>
+
             <button id="admin-logout-button" className="btn btn-danger btn-sm" onClick={handleLogout}>
               Sign Out
             </button>
@@ -160,38 +176,56 @@ export default function Admin({ user, onLogout }) {
         </div>
       </nav>
 
-      <div className="admin-page">
-        <h2>🛡 Admin Panel</h2>
+      {/* Main Admin Content */}
+      <div className="page-container">
+        <div>
+          <span className="eyebrow-label">CAMPUS MINI-CLOUD // INFRASTRUCTURE MANAGEMENT</span>
+          <h1 style={{ marginTop: '0.35rem' }}>System Control Panel</h1>
+        </div>
 
         {error && <div className="alert alert-error">{error}</div>}
 
-        {/* Summary stats */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Total Users', value: users.length },
-            { label: 'Allowed Emails', value: allowedEmails.length },
-            { label: 'Total Files', value: files.length },
-            { label: 'Total Storage Used', value: formatBytes(totalStorage) },
-          ].map((stat) => (
-            <div key={stat.label} className="card" style={{ flex: '1 1 180px', minWidth: 160 }}>
-              <div className="card-title">{stat.label}</div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--accent)' }}>{stat.value}</div>
+        {/* Telemetry Stats Grid */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <span className="eyebrow-label">REGISTERED USERS</span>
+            <div className="stat-value">{users.length}</div>
+          </div>
+
+          <div className="stat-card">
+            <span className="eyebrow-label">AUTHORIZED EMAILS</span>
+            <div className="stat-value">{allowedEmails.length}</div>
+          </div>
+
+          <div className="stat-card">
+            <span className="eyebrow-label">TOTAL OBJECTS</span>
+            <div className="stat-value">{files.length}</div>
+          </div>
+
+          <div className="stat-card">
+            <span className="eyebrow-label">STORAGE CONSUMED</span>
+            <div className="stat-value" style={{ fontSize: '1.5rem' }}>
+              {formatBytes(totalStorage)}
             </div>
-          ))}
+          </div>
         </div>
 
-        <div className="admin-grid">
-          {/* Users table */}
-          <div className="card">
-            <div className="section-title">👥 Users ({users.length})</div>
+        {/* System Administration Sections */}
+        <div className="admin-sections-grid">
+          {/* User Accounts Panel */}
+          <div className="panel-card">
+            <div className="panel-header">
+              <span className="eyebrow-label">ALL USERS ({users.length})</span>
+            </div>
+
             {users.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }}>No users yet.</p>
+              <div className="empty-state">NO USER ACCOUNTS REGISTERED</div>
             ) : (
-              <div className="file-table-wrap">
-                <table className="file-table">
+              <div className="responsive-table-wrap" style={{ maxHeight: 380, overflowY: 'auto' }}>
+                <table className="data-table data-table-responsive">
                   <thead>
                     <tr>
-                      <th>Username</th>
+                      <th>User</th>
                       <th>Role</th>
                       <th>Used / Quota</th>
                       <th>Files</th>
@@ -199,32 +233,35 @@ export default function Admin({ user, onLogout }) {
                   </thead>
                   <tbody>
                     {users.map((u) => {
-                      const pct = Number(u.quotaBytes) > 0
-                        ? Math.min(100, (Number(u.usedBytes) / Number(u.quotaBytes)) * 100)
-                        : 0;
+                      const pct =
+                        Number(u.quotaBytes) > 0
+                          ? Math.min(100, (Number(u.usedBytes) / Number(u.quotaBytes)) * 100)
+                          : 0;
                       return (
                         <tr key={u.id}>
-                          <td style={{ fontWeight: 500 }}>{u.username}</td>
+                          <td style={{ fontWeight: 600, fontSize: '1rem' }}>{u.username}</td>
                           <td>
-                            {u.isAdmin
-                              ? <span className="badge-admin">Admin</span>
-                              : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>User</span>}
+                            {u.isAdmin ? (
+                              <span className="badge-admin">Admin</span>
+                            ) : (
+                              <span className="cell-mono">User</span>
+                            )}
                           </td>
-                          <td>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          <td className="cell-mono">
+                            <div>
                               {formatBytes(u.usedBytes)} / {formatBytes(u.quotaBytes)}
                             </div>
-                            <div className="quota-track" style={{ marginTop: 4, height: 4 }}>
+                            <div className="quota-track-bg" style={{ marginTop: 5, height: 6 }}>
                               <div
-                                  className="quota-fill"
-                                  style={{
-                                    width: `${pct}%`,
-                                    background: pct > 90 ? 'var(--danger)' : pct > 70 ? 'var(--warning)' : 'var(--accent)',
-                                  }}
+                                className="quota-bar-fill"
+                                style={{
+                                  width: `${pct}%`,
+                                  backgroundColor: pct > 90 ? 'var(--state-danger)' : 'var(--accent-lime)',
+                                }}
                               />
                             </div>
                           </td>
-                          <td style={{ color: 'var(--text-secondary)' }}>{u.fileCount}</td>
+                          <td className="cell-mono">{u.fileCount}</td>
                         </tr>
                       );
                     })}
@@ -234,54 +271,47 @@ export default function Admin({ user, onLogout }) {
             )}
           </div>
 
-          {/* Allowed Emails Section */}
-          <div className="card">
-            <div className="section-title">✉️ Allowed Emails ({allowedEmails.length})</div>
-            
+          {/* Authorized Emails Panel */}
+          <div className="panel-card">
+            <div className="panel-header">
+              <span className="eyebrow-label">AUTHORIZED EMAILS ({allowedEmails.length})</span>
+            </div>
+
             {emailError && <div className="alert alert-error">{emailError}</div>}
             {emailSuccess && <div className="alert alert-success">{emailSuccess}</div>}
 
-            <form onSubmit={handleAddEmail} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+            <form onSubmit={handleAddEmail} style={{ display: 'flex', gap: '0.6rem', marginBottom: '1.25rem' }}>
               <input
                 id="allowed-email-input"
+                className="form-input"
                 type="email"
-                placeholder="student@example.com"
+                placeholder="student@campus.edu"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
                 required
-                style={{
-                  flex: 1,
-                  padding: '0.5rem 0.75rem',
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  color: 'var(--text-primary)',
-                  fontSize: '0.9rem',
-                  outline: 'none',
-                }}
+                style={{ flex: 1 }}
               />
               <button
                 id="add-email-button"
                 type="submit"
                 className="btn btn-primary"
-                style={{ width: 'auto', padding: '0.5rem 1rem' }}
                 disabled={actionLoading || !newEmail}
               >
-                {actionLoading ? 'Adding…' : 'Add Email'}
+                {actionLoading ? 'Provisioning…' : 'Authorize Email'}
               </button>
             </form>
 
             {allowedEmails.length === 0 ? (
-              <p style={{ color: 'var(--text-muted)' }}>No allowed emails yet.</p>
+              <div className="empty-state">NO AUTHORIZED EMAILS FOUND</div>
             ) : (
-              <div className="file-table-wrap" style={{ maxHeight: 350, overflowY: 'auto' }}>
-                <table className="file-table">
+              <div className="responsive-table-wrap" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                <table className="data-table data-table-responsive">
                   <thead>
                     <tr>
-                      <th>Email Address</th>
-                      <th>5-Digit Code</th>
+                      <th>Email</th>
+                      <th>Code</th>
                       <th>Status</th>
-                      <th>Expires In</th>
+                      <th>Expires</th>
                       <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
@@ -290,48 +320,80 @@ export default function Admin({ user, onLogout }) {
                       const now = new Date();
                       const isBlocked = item.blockedUntil && now < new Date(item.blockedUntil);
                       const isExpired = item.expiresAt && now > new Date(item.expiresAt);
-                      const blockMinsLeft = isBlocked ? Math.ceil((new Date(item.blockedUntil) - now) / 60000) : 0;
+                      const blockMinsLeft = isBlocked
+                        ? Math.ceil((new Date(item.blockedUntil) - now) / 60000)
+                        : 0;
 
                       return (
                         <tr key={item.id}>
-                          <td style={{ fontWeight: 500 }}>{item.email}</td>
+                          <td style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.email}</td>
                           <td>
-                            <span style={{
-                              fontFamily: 'monospace',
-                              fontSize: '1rem',
-                              fontWeight: 700,
-                              letterSpacing: '0.1rem',
-                              color: isBlocked || isExpired ? 'var(--text-muted)' : 'var(--accent)',
-                              background: 'rgba(155, 255, 77, 0.12)',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              border: '1px solid rgba(155, 255, 77, 0.3)',
-                              textDecoration: isExpired ? 'line-through' : 'none'
-                            }}>
+                            <span
+                              className="cell-mono"
+                              style={{
+                                fontWeight: 700,
+                                letterSpacing: '0.1em',
+                                color: isBlocked || isExpired ? 'var(--text-muted)' : 'var(--accent-lime)',
+                                backgroundColor: 'var(--accent-lime-alpha)',
+                                padding: '3px 8px',
+                                borderRadius: '3px',
+                                textDecoration: isExpired ? 'line-through' : 'none',
+                              }}
+                            >
                               {item.code}
                             </span>
                           </td>
                           <td>
                             {isBlocked ? (
-                              <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
-                                Blocked ({blockMinsLeft}m)
+                              <span
+                                style={{
+                                  backgroundColor: 'var(--state-danger-alpha)',
+                                  color: 'var(--state-danger)',
+                                  padding: '3px 8px',
+                                  borderRadius: '3px',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 700,
+                                  fontFamily: 'var(--font-mono)',
+                                }}
+                              >
+                                BLOCKED ({blockMinsLeft}m)
                               </span>
                             ) : isExpired ? (
-                              <span style={{ background: 'rgba(245, 158, 11, 0.2)', color: '#fbbf24', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
-                                Expired
+                              <span
+                                style={{
+                                  backgroundColor: 'rgba(232, 96, 74, 0.15)',
+                                  color: 'var(--state-danger)',
+                                  padding: '3px 8px',
+                                  borderRadius: '3px',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 700,
+                                  fontFamily: 'var(--font-mono)',
+                                }}
+                              >
+                                EXPIRED
                               </span>
                             ) : (
-                              <span style={{ background: 'rgba(34, 197, 94, 0.2)', color: '#4ade80', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
-                                Active
+                              <span
+                                style={{
+                                  backgroundColor: 'var(--state-success-alpha)',
+                                  color: 'var(--state-success)',
+                                  padding: '3px 8px',
+                                  borderRadius: '3px',
+                                  fontSize: '0.82rem',
+                                  fontWeight: 700,
+                                  fontFamily: 'var(--font-mono)',
+                                }}
+                              >
+                                ACTIVE
                               </span>
                             )}
                           </td>
-                          <td className="file-date">{formatRemainingTime(item.expiresAt)}</td>
-                          <td style={{ textAlign: 'right', display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                          <td className="cell-mono">{formatRemainingTime(item.expiresAt)}</td>
+                          <td className="cell-actions" style={{ justifyContent: 'flex-end' }}>
                             <button
                               type="button"
                               className="btn btn-secondary btn-sm"
-                              title="Generate a new 24h code & unblock"
+                              title="Regenerate code"
                               onClick={() => handleRegenerateCode(item.id)}
                             >
                               New Code
@@ -339,9 +401,10 @@ export default function Admin({ user, onLogout }) {
                             <button
                               type="button"
                               className="btn btn-danger btn-sm"
+                              title="Revoke access"
                               onClick={() => handleDeleteEmail(item.id)}
                             >
-                              Remove
+                              Revoke
                             </button>
                           </td>
                         </tr>
@@ -354,14 +417,17 @@ export default function Admin({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Files card (full-width below grid) */}
-        <div className="card" style={{ marginTop: '2rem' }}>
-          <div className="section-title">📁 All Files ({files.length})</div>
+        {/* Global Files Inventory Panel */}
+        <div className="panel-card">
+          <div className="panel-header">
+            <span className="eyebrow-label">ALL STORED OBJECTS ({files.length})</span>
+          </div>
+
           {files.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)' }}>No files uploaded yet.</p>
+            <div className="empty-state">NO ENCRYPTED FILES IN SYSTEM INVENTORY</div>
           ) : (
-            <div className="file-table-wrap" style={{ maxHeight: 500, overflowY: 'auto' }}>
-              <table className="file-table">
+            <div className="responsive-table-wrap" style={{ maxHeight: 400, overflowY: 'auto' }}>
+              <table className="data-table data-table-responsive">
                 <thead>
                   <tr>
                     <th>Filename</th>
@@ -373,10 +439,14 @@ export default function Admin({ user, onLogout }) {
                 <tbody>
                   {files.map((f) => (
                     <tr key={f.id}>
-                      <td className="file-name" title={f.filename}>{f.filename}</td>
-                      <td style={{ color: 'var(--accent)', fontWeight: 500 }}>{f.username}</td>
-                      <td className="file-size">{formatBytes(f.sizeBytes)}</td>
-                      <td className="file-date">{formatDate(f.uploadedAt)}</td>
+                      <td style={{ fontWeight: 600, fontSize: '1rem' }} title={f.filename}>
+                        {f.filename}
+                      </td>
+                      <td className="cell-mono" style={{ color: 'var(--accent-lime)' }}>
+                        {f.username}
+                      </td>
+                      <td className="cell-mono">{formatBytes(f.sizeBytes)}</td>
+                      <td className="cell-mono">{formatDate(f.uploadedAt)}</td>
                     </tr>
                   ))}
                 </tbody>

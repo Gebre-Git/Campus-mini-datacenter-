@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register, checkEmail } from '../services/api';
 import BrandLogo from '../components/BrandLogo';
+import NodeGridCanvas from '../components/NodeGridCanvas';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -34,7 +35,7 @@ export default function Register() {
       if (res.allowed) {
         setIsEmailVerified(true);
         if (res.bootstrap) {
-          setSuccessMsg('First user signup: registration is unlocked for database bootstrap.');
+          setSuccessMsg('SYSTEM UNLOCKED: Database bootstrap mode active.');
         }
       }
     } catch (err) {
@@ -82,10 +83,17 @@ export default function Register() {
 
   return (
     <div className="auth-page">
+      <NodeGridCanvas />
+
       <div className="auth-card">
-        <div className="auth-logo">
-          <BrandLogo size={48} />
-          <p>Create your account</p>
+        <div className="auth-header">
+          <span className="eyebrow-label">CAMPUS MINI-CLOUD // PROVISION ACCESS</span>
+          <div style={{ margin: '1.1rem 0 0.6rem 0' }}>
+            <BrandLogo size={44} />
+          </div>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+            Create encrypted user account
+          </p>
         </div>
 
         {error && <div className="alert alert-error">{error}</div>}
@@ -93,68 +101,83 @@ export default function Register() {
         {!isEmailVerified ? (
           <form onSubmit={handleVerifyEmail} noValidate>
             <div className="form-group">
-              <label htmlFor="reg-email">School Email</label>
+              <label htmlFor="reg-email">Campus Email</label>
               <input
                 id="reg-email"
+                className="form-input"
                 type="email"
-                placeholder="student@example.com"
+                placeholder="student@campus.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
+
             <div className="form-group">
               <label htmlFor="reg-code">5-Digit Verification Code</label>
               <input
                 id="reg-code"
+                className="form-input mono-text"
                 type="text"
                 maxLength={5}
-                placeholder="e.g. 12345"
+                placeholder="12345"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                style={{ letterSpacing: '0.1rem', fontWeight: 600 }}
+                style={{ letterSpacing: '0.15em', fontWeight: 600, fontSize: '1rem' }}
               />
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                Ask your admin for your 5-digit access code (not required for bootstrap user)
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Issued by administrator (bypass for initial bootstrap user)
               </span>
             </div>
+
             <button
               id="verify-email-submit"
               type="submit"
               className="btn btn-primary"
+              style={{ width: '100%', marginTop: '0.6rem' }}
               disabled={loading || !email}
             >
-              {loading ? <><span className="spinner" /> Verifying…</> : 'Continue'}
+              {loading ? (
+                <>
+                  <span className="spinner" style={{ borderColor: 'rgba(12, 16, 12, 0.3)', borderTopColor: '#0C100C' }} />
+                  Verifying Authorization…
+                </>
+              ) : (
+                'Verify Access Code'
+              )}
             </button>
           </form>
         ) : (
           <form onSubmit={handleSubmit} noValidate>
             {successMsg && <div className="alert alert-success">{successMsg}</div>}
-            
+
             <div className="form-group">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-                <label htmlFor="reg-email-verified" style={{ margin: 0 }}>School Email</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label htmlFor="reg-email-verified">Campus Email</label>
                 <button
                   type="button"
                   onClick={handleResetEmail}
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: 'var(--accent)',
-                    fontSize: '0.8rem',
+                    color: 'var(--accent-lime)',
+                    fontSize: '0.85rem',
                     cursor: 'pointer',
-                    padding: 0
+                    textDecoration: 'underline',
+                    padding: 0,
+                    fontWeight: 600,
                   }}
                 >
-                  Change
+                  Change Email
                 </button>
               </div>
               <input
                 id="reg-email-verified"
+                className="form-input mono-text"
                 type="email"
                 value={email}
                 disabled
-                style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                style={{ opacity: 0.7 }}
               />
             </div>
 
@@ -162,8 +185,9 @@ export default function Register() {
               <label htmlFor="reg-username">Username</label>
               <input
                 id="reg-username"
+                className="form-input"
                 type="text"
-                placeholder="Choose a username (3–32 chars)"
+                placeholder="Choose username (3–32 chars)"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
@@ -172,10 +196,12 @@ export default function Register() {
                 required
               />
             </div>
+
             <div className="form-group">
               <label htmlFor="reg-password">Password</label>
               <input
                 id="reg-password"
+                className="form-input"
                 type="password"
                 placeholder="At least 6 characters"
                 value={password}
@@ -184,32 +210,45 @@ export default function Register() {
                 required
               />
             </div>
+
             <div className="form-group">
               <label htmlFor="reg-confirm">Confirm Password</label>
               <input
                 id="reg-confirm"
+                className="form-input"
                 type="password"
-                placeholder="Re-enter your password"
+                placeholder="Re-enter password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 autoComplete="new-password"
                 required
               />
             </div>
+
             <button
               id="register-submit"
               type="submit"
               className="btn btn-primary"
+              style={{ width: '100%', marginTop: '0.6rem' }}
               disabled={loading || !username || !password || !confirm}
             >
-              {loading ? <><span className="spinner" /> Creating account…</> : 'Create Account'}
+              {loading ? (
+                <>
+                  <span className="spinner" style={{ borderColor: 'rgba(12, 16, 12, 0.3)', borderTopColor: '#0C100C' }} />
+                  Provisioning Account…
+                </>
+              ) : (
+                'Create User Account'
+              )}
             </button>
           </form>
         )}
 
         <div className="auth-footer">
-          Already have an account?{' '}
-          <Link to="/login">Sign in</Link>
+          Already authorized?{' '}
+          <Link to="/login" className="plain-link">
+            Return to Login
+          </Link>
         </div>
       </div>
     </div>
