@@ -4,31 +4,31 @@
    =========================== */
 
 :root {
-  --bg-primary: #0d0f14;
-  --bg-secondary: #13161e;
-  --bg-card: rgba(255, 255, 255, 0.05);
-  --bg-card-hover: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-focus: rgba(99, 179, 237, 0.6);
+  --bg-primary: #0a0d12;
+  --bg-secondary: #11151c;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --bg-card-hover: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.09);
+  --border-focus: rgba(155, 255, 77, 0.6);
 
-  --accent: #4f9eff;
-  --accent-dark: #2d79d6;
-  --accent-glow: rgba(79, 158, 255, 0.3);
+  --accent: #9BFF4D;
+  --accent-dark: #83e038;
+  --accent-glow: rgba(155, 255, 77, 0.25);
 
   --danger: #fc5c65;
   --danger-dark: #d63031;
   --success: #26de81;
   --warning: #fed330;
 
-  --text-primary: #e8eaed;
+  --text-primary: #f0f2f5;
   --text-secondary: #9aa0ac;
   --text-muted: #5c6370;
 
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --radius: 12px;
   --radius-sm: 8px;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.6);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 48px rgba(0, 0, 0, 0.7);
 }
 
 *, *::before, *::after {
@@ -48,8 +48,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(79, 158, 255, 0.05) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(99, 66, 245, 0.05) 0%, transparent 60%);
+    radial-gradient(ellipse at 20% 50%, rgba(155, 255, 77, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(38, 222, 129, 0.03) 0%, transparent 60%);
   min-height: 100vh;
 }
 
@@ -107,7 +107,7 @@ a:hover { text-decoration: underline; }
 
 .auth-logo h1 {
   font-size: 1.5rem;
-  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  background: linear-gradient(135deg, var(--accent), #26de81);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -178,9 +178,10 @@ a:hover { text-decoration: underline; }
 
 .btn-primary {
   background: var(--accent);
-  color: #fff;
+  color: #0a0d12;
+  font-weight: 600;
   width: 100%;
-  box-shadow: 0 2px 12px var(--accent-glow);
+  box-shadow: 0 2px 14px var(--accent-glow);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -205,13 +206,13 @@ a:hover { text-decoration: underline; }
 .btn-secondary {
   background: transparent;
   color: var(--accent);
-  border: 1px solid rgba(79, 158, 255, 0.4);
+  border: 1px solid rgba(155, 255, 77, 0.4);
   padding: 0.4rem 0.75rem;
   font-size: 0.8rem;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(79, 158, 255, 0.1);
+  background: rgba(155, 255, 77, 0.1);
   border-color: var(--accent);
 }
 
@@ -242,7 +243,7 @@ a:hover { text-decoration: underline; }
 
 /* ── Navbar ── */
 .navbar {
-  background: rgba(13, 15, 20, 0.85);
+  background: rgba(10, 13, 18, 0.85);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
   padding: 0 1.5rem;
@@ -291,9 +292,9 @@ a:hover { text-decoration: underline; }
 
 .badge-admin {
   display: inline-block;
-  background: rgba(167, 139, 250, 0.2);
-  color: #a78bfa;
-  border: 1px solid rgba(167, 139, 250, 0.4);
+  background: rgba(155, 255, 77, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(155, 255, 77, 0.3);
   border-radius: 999px;
   font-size: 0.7rem;
   font-weight: 600;
@@ -369,7 +370,7 @@ a:hover { text-decoration: underline; }
   height: 100%;
   border-radius: 999px;
   transition: width 0.4s ease;
-  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  background: linear-gradient(90deg, var(--accent), #26de81);
 }
 
 .quota-fill.warn { background: linear-gradient(90deg, var(--warning), #fc5c65); }

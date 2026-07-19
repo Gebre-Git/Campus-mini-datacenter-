@@ -302,10 +302,10 @@ export default function Admin({ user, onLogout }) {
                               fontWeight: 700,
                               letterSpacing: '0.1rem',
                               color: isBlocked || isExpired ? 'var(--text-muted)' : 'var(--accent)',
-                              background: 'rgba(99, 102, 241, 0.15)',
+                              background: 'rgba(155, 255, 77, 0.12)',
                               padding: '2px 8px',
                               borderRadius: '4px',
-                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              border: '1px solid rgba(155, 255, 77, 0.3)',
                               textDecoration: isExpired ? 'line-through' : 'none'
                             }}>
                               {item.code}
