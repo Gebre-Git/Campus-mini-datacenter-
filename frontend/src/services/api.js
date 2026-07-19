@@ -104,6 +104,18 @@ export async function listFiles() {
   return handleResponse(res);
 }
 
+export async function checkUpload(sizeBytes) {
+  const res = await fetch('/api/files/check-upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ sizeBytes }),
+  });
+  return handleResponse(res);
+}
+
 export async function uploadFile(file, onProgress) {
   const formData = new FormData();
   formData.append('file', file);

@@ -11,11 +11,48 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
+const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024; // 500 MB max per file
+
 // Multer: store file in memory so we can encrypt before writing to disk
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max per upload
+  limits: { fileSize: MAX_FILE_SIZE_BYTES },
 });
+
+// Middleware to check Content-Length header & quota BEFORE multer buffers/streams payload
+async function preCheckUploadHeaders(req, res, next) {
+  try {
+    const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+
+    // If Content-Length exceeds 500 MB (with minor overhead margin), reject immediately
+    if (contentLength > MAX_FILE_SIZE_BYTES + 10240) {
+      return res.status(413).json({ error: 'File size exceeds maximum allowed limit of 500 MB' });
+    }
+
+    if (contentLength > 0 && req.user && req.user.userId) {
+      const quotaCheck = await checkQuota(req.user.userId, contentLength);
+      if (!quotaCheck.allowed) {
+        return res.status(413).json({ error: quotaCheck.message });
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Multer error handling wrapper
+function handleMulterUpload(req, res, next) {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({ error: 'File size exceeds maximum allowed limit of 500 MB' });
+      }
+      return res.status(400).json({ error: err.message || 'File upload error' });
+    }
+    next();
+  });
+}
 
 // Resolve storage directory relative to backend root
 const STORAGE_DIR = path.resolve(__dirname, '../../storage');
@@ -83,8 +120,39 @@ router.get('/me', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/files/check-upload — pre-check file size and remaining storage before uploading
+router.post('/check-upload', authMiddleware, async (req, res) => {
+  try {
+    const { sizeBytes } = req.body;
+    if (sizeBytes === undefined || sizeBytes === null || isNaN(Number(sizeBytes))) {
+      return res.status(400).json({ allowed: false, error: 'Valid file size (sizeBytes) is required' });
+    }
+
+    const fileSizeNum = Number(sizeBytes);
+    if (fileSizeNum > MAX_FILE_SIZE_BYTES) {
+      return res.status(413).json({
+        allowed: false,
+        error: 'File size exceeds maximum allowed limit of 500 MB',
+      });
+    }
+
+    const quotaCheck = await checkQuota(req.user.userId, fileSizeNum);
+    if (!quotaCheck.allowed) {
+      return res.status(413).json({
+        allowed: false,
+        error: quotaCheck.message,
+      });
+    }
+
+    return res.json({ allowed: true, message: 'Upload check passed' });
+  } catch (err) {
+    console.error('[files/check-upload]', err);
+    return res.status(500).json({ allowed: false, error: 'Check failed: ' + err.message });
+  }
+});
+
 // POST /api/files/upload — upload + encrypt a file
-router.post('/upload', authMiddleware, upload.single('file'), async (req, res) => {
+router.post('/upload', authMiddleware, preCheckUploadHeaders, handleMulterUpload, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file provided' });
@@ -92,6 +160,10 @@ router.post('/upload', authMiddleware, upload.single('file'), async (req, res) =
 
     const { userId } = req.user;
     const fileSize = req.file.size;
+
+    if (fileSize > MAX_FILE_SIZE_BYTES) {
+      return res.status(413).json({ error: 'File size exceeds maximum allowed limit of 500 MB' });
+    }
 
     // 1. Quota check
     const quotaCheck = await checkQuota(userId, fileSize);

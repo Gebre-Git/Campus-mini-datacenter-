@@ -88,7 +88,7 @@ export default function Dashboard({ user, onLogout }) {
         {/* Upload Card */}
         <div className="card">
           <div className="card-title">Upload</div>
-          <UploadButton onUploadComplete={fetchData} />
+          <UploadButton userQuota={quota} onUploadComplete={fetchData} />
         </div>
 
         {/* File List Card */}
